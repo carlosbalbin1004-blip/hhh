@@ -1,0 +1,11 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Playfair Display & Montserrat in your HTML or _document.js for production:
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+*/
+
+body { background-color: #FAF6F0; }
+.font-serif { font-family: 'Playfair Display', serif; }

@@ -1,38 +1,96 @@
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 
 export default function SKIINBOX() {
   const heroRef = useRef(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [profileStatus, setProfileStatus] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('');
 
   useEffect(() => {
-    const els = document.querySelectorAll(".reveal");
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("revealed");
-            io.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.12 }
-    );
-    els.forEach((el) => io.observe(el));
-
+    const els = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('revealed'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(el => io.observe(el));
     const onScroll = () => {
       if (!heroRef.current) return;
       const scrolled = window.scrollY;
       heroRef.current.style.transform = `translateY(${scrolled * 0.12}px)`;
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const plans = [
-    { name: 'Básico', price: '$5', perks: ['1 caja al mes', '3 prendas sugeridas'] },
-    { name: 'Estándar', price: '$20', perks: ['1-2 cajas/mes', '6 prendas sugeridas', 'Asesoría 1:1'] },
-    { name: 'Premium', price: '$25', perks: ['Caja personalizada', 'Acceso a marcas premium', 'Consultoría dedicada'] },
+    { name: 'Básico', price: 5, display: '$5' },
+    { name: 'Estándar', price: 20, display: '$20' },
+    { name: 'Premium', price: 25, display: '$25' },
   ];
+
+  async function handleSubmitProfile(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      nombre: form.nombre.value,
+      ocasiones: form.occasions.value,
+      colores: form.colores.value,
+      prioridad: form.prioridad.value,
+      presupuesto: form.presupuesto.value,
+      talla_arriba: form.talla_arriba.value,
+      talla_abajo: form.talla_abajo.value,
+      timestamp: new Date().toISOString()
+    };
+    setProfileStatus('Guardando...');
+    try {
+      const res = await fetch('/api/save-profile', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(data)
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setProfileStatus('Perfil guardado ✅');
+      } else {
+        setProfileStatus('Error al guardar: ' + j.message);
+      }
+    } catch (err) {
+      setProfileStatus('Error de red: ' + err.message);
+    }
+  }
+
+  function openCheckout(plan) {
+    setSelectedPlan(plan);
+    setModalOpen(true);
+    setPaymentStatus('');
+  }
+
+  async function confirmMockPayment() {
+    setPaymentStatus('Procesando pago...');
+    try {
+      const res = await fetch('/api/mock-pay', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          plan: selectedPlan.name,
+          amount: selectedPlan.price,
+          timestamp: new Date().toISOString()
+        })
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setPaymentStatus('Pago simulado realizado ✅ (ID: ' + j.paymentId + ')');
+        setModalOpen(false);
+      } else {
+        setPaymentStatus('Error pago: ' + j.message);
+      }
+    } catch (err) {
+      setPaymentStatus('Error de red: ' + err.message);
+    }
+  }
 
   return (
     <div className="min-h-screen font-ui text-gray-800 bg-[#FAF6F0]">
@@ -47,11 +105,8 @@ export default function SKIINBOX() {
             <a href="#plans" className="hover:text-[#0b3b66]">Planes</a>
             <a href="#lookbook" className="hover:text-[#0b3b66]">Lookbook</a>
             <a href="#test" className="hover:text-[#0b3b66]">Test de estilo</a>
-            <button className="px-4 py-2 border rounded-md text-sm" style={{ borderColor: '#C9A36B' }}>Iniciar sesión</button>
+            <button className="px-4 py-2 border rounded-md text-sm" style={{ borderColor:'#C9A36B' }}>Iniciar sesión</button>
           </nav>
-          <div className="md:hidden">
-            <button aria-label="abrir menu">☰</button>
-          </div>
         </div>
       </header>
 
@@ -63,14 +118,13 @@ export default function SKIINBOX() {
             </div>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#FAF6F0]/80" />
           </div>
-
           <div className="relative max-w-6xl mx-auto px-6 py-28">
             <div className="max-w-2xl reveal transition duration-600 opacity-0 translate-y-6">
               <h1 className="text-5xl leading-tight font-serif text-[#060606]">SKIINBOX — Moda que te entiende</h1>
               <p className="mt-6 text-lg text-gray-700">Asesoría de estilo y prendas de alta costura seleccionadas para ti. Sin esfuerzo.</p>
               <div className="mt-8 flex gap-4">
-                <a href="#test" className="inline-flex items-center px-6 py-3 rounded-md font-medium" style={{ background: '#060606', color: '#FAF6F0' }}>Hacer test de estilo</a>
-                <a href="#plans" className="inline-flex items-center px-6 py-3 rounded-md border" style={{ borderColor: '#C9A36B' }}>Ver planes</a>
+                <a href="#test" className="inline-flex items-center px-6 py-3 rounded-md font-medium" style={{ background:'#060606', color:'#FAF6F0' }}>Hacer test de estilo</a>
+                <a href="#plans" className="inline-flex items-center px-6 py-3 rounded-md border" style={{ borderColor:'#C9A36B' }}>Ver planes</a>
               </div>
             </div>
           </div>
@@ -101,15 +155,16 @@ export default function SKIINBOX() {
           <div className="max-w-6xl mx-auto px-6">
             <h3 className="text-2xl font-serif mb-6">Planes</h3>
             <div className="grid md:grid-cols-3 gap-6">
-              {plans.map((p) => (
+              {plans.map(p => (
                 <div key={p.name} className="reveal bg-[#FAF6F0] border rounded-2xl p-6 shadow-sm opacity-0 translate-y-6 transition">
                   <h4 className="font-serif text-xl">{p.name}</h4>
-                  <p className="mt-2 text-3xl font-semibold">{p.price}</p>
+                  <p className="mt-2 text-3xl font-semibold">${p.price}</p>
                   <ul className="mt-4 space-y-2 text-gray-600">
-                    {p.perks.map((perk) => <li key={perk}>• {perk}</li>)}
+                    <li>• Suscripción mensual</li>
+                    <li>• Selección curada por estilista + IA</li>
                   </ul>
                   <div className="mt-6">
-                    <button className="px-5 py-2 rounded-md font-medium border" style={{ borderColor: '#C9A36B' }}>Suscribirme</button>
+                    <button onClick={() => openCheckout(p)} className="px-5 py-2 rounded-md font-medium border" style={{ borderColor:'#C9A36B' }}>Suscribirme — ${p.price}</button>
                   </div>
                 </div>
               ))}
@@ -122,7 +177,7 @@ export default function SKIINBOX() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <figure key={i} className="overflow-hidden rounded-xl reveal opacity-0 translate-y-6 transition">
-                <img src={`/assets/lookbook-${i + 1}.jpg`} alt={`Look ${i + 1}`} className="w-full h-64 object-cover" />
+                <img src={`/assets/lookbook-${i+1}.jpg`} alt={`Look ${i+1}`} className="w-full h-64 object-cover" />
               </figure>
             ))}
           </div>
@@ -131,12 +186,13 @@ export default function SKIINBOX() {
         <section id="test" className="bg-white/60 py-16">
           <div className="max-w-4xl mx-auto px-6">
             <h3 className="text-2xl font-serif mb-4">Test de estilo</h3>
-            <p className="text-gray-700">Responde estas preguntas para definir tu perfil. (Mock funcional — conecta backend para guardar respuestas.)</p>
+            <p className="text-gray-700">Responde estas preguntas para definir tu perfil. (Los datos se guardan en el servidor - mock)</p>
 
-            <form className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmitProfile} className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input name="nombre" placeholder="Nombre" className="p-2 border rounded-md md:col-span-2" required />
               <label className="flex flex-col text-sm">
                 Ocasiones principales
-                <select className="mt-2 p-2 border rounded-md">
+                <select name="occasions" className="mt-2 p-2 border rounded-md">
                   <option>Oficina</option>
                   <option>Casual</option>
                   <option>Eventos</option>
@@ -146,12 +202,12 @@ export default function SKIINBOX() {
 
               <label className="flex flex-col text-sm">
                 Colores preferidos
-                <input placeholder="Neutros, azules, tierra" className="mt-2 p-2 border rounded-md" />
+                <input name="colores" placeholder="Neutros, azules, tierra" className="mt-2 p-2 border rounded-md" />
               </label>
 
               <label className="flex flex-col text-sm">
                 ¿Qué priorizas?
-                <select className="mt-2 p-2 border rounded-md">
+                <select name="prioridad" className="mt-2 p-2 border rounded-md">
                   <option>Comodidad</option>
                   <option>Tendencia</option>
                   <option>Marca</option>
@@ -161,16 +217,22 @@ export default function SKIINBOX() {
 
               <label className="flex flex-col text-sm">
                 Presupuesto por prenda
-                <input placeholder="S/ 100 - S/ 400" className="mt-2 p-2 border rounded-md" />
+                <input name="presupuesto" placeholder="S/ 100 - S/ 400" className="mt-2 p-2 border rounded-md" />
               </label>
 
-              <label className="flex flex-col text-sm md:col-span-2">
-                Subir foto (opcional)
-                <input type="file" accept="image/*" className="mt-2" />
+              <label className="flex flex-col text-sm">
+                Talla - arriba
+                <input name="talla_arriba" placeholder="M, L, S" className="mt-2 p-2 border rounded-md" />
+              </label>
+
+              <label className="flex flex-col text-sm">
+                Talla - abajo
+                <input name="talla_abajo" placeholder="32, 34, S" className="mt-2 p-2 border rounded-md" />
               </label>
 
               <div className="md:col-span-2">
-                <button type="button" className="px-6 py-3 rounded-md" style={{ background: '#060606', color: '#FAF6F0' }}>Generar perfil</button>
+                <button type="submit" className="px-6 py-3 rounded-md" style={{ background:'#060606', color:'#FAF6F0' }}>Generar perfil</button>
+                <span className="ml-4 text-sm text-green-700">{profileStatus}</span>
               </div>
             </form>
           </div>
@@ -200,7 +262,6 @@ export default function SKIINBOX() {
                   <div className="text-sm text-gray-600">Moda por suscripción · Perú</div>
                 </div>
               </div>
-
               <p className="mt-4 text-gray-600 max-w-sm">© {new Date().getFullYear()} SKIINBOX. Todos los derechos reservados.</p>
             </div>
 
@@ -219,6 +280,22 @@ export default function SKIINBOX() {
           </div>
         </footer>
       </main>
+
+      {/* Mock checkout modal */}
+      {modalOpen && selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h4 className="text-xl font-semibold">Suscripción — {selectedPlan.name}</h4>
+            <p className="mt-2">Precio: ${selectedPlan.price} / mes</p>
+            <p className="mt-4 text-sm text-gray-600">Este es un pago simulado para demo. No se procesará dinero real.</p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={confirmMockPayment} className="px-4 py-2 rounded-md" style={{ background:'#060606', color:'#FAF6F0' }}>Pagar ${selectedPlan.price}</button>
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-md border">Cancelar</button>
+            </div>
+            <div className="mt-4 text-sm text-green-700">{paymentStatus}</div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .font-serif { font-family: 'Playfair Display', serif; }
